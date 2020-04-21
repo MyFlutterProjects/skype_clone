@@ -1,4 +1,3 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:skype_clone/resources/firebase_repository.dart';
@@ -16,54 +15,47 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: loginButton(),
-
-      
     );
   }
 
   Widget loginButton() {
-    return FlatButton( 
+    return FlatButton(
       padding: EdgeInsets.all(35),
-      child: Text('LOGIN',
-      style: TextStyle( 
-        fontSize: 35,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 1.2
-      ),
+      child: Text(
+        'LOGIN',
+        style: TextStyle(
+            fontSize: 35, fontWeight: FontWeight.w900, letterSpacing: 1.2),
       ),
       onPressed: () => performLogin(),
     );
   }
 
-     void performLogin() {
-       print('pressed');
-       _repository.signIn().then((FirebaseUser user){
-         if (user != null) {
-           authenticateUser(user);
-         } else {
-           print("There was an error");
-         }
-       });
-    }
+  void performLogin() {
+    print('pressed');
+    _repository.signIn().then((FirebaseUser user) {
+      if (user != null) {
+        authenticateUser(user);
+      } else {
+        print("There was an error");
+      }
+    });
+  }
 
-    void authenticateUser(FirebaseUser user) {
-        _repository.authenticateUser(user)
-        .then((isNew) {
-          if(isNew) {
-            _repository.addDataToDb(user).then((value) {
-              Navigator.pushReplacement(context,
-               MaterialPageRoute(builder: (context) {
-                 return HomeScreen();
-               }));
-            });
-          } else {
-            Navigator.pushReplacement(context,
-               MaterialPageRoute(builder: (context) {
-                 return HomeScreen();
-               }));
-               
-
-          }
+  void authenticateUser(FirebaseUser user) {
+    _repository.authenticateUser(user).then((isNew) {
+      if (isNew) {
+        _repository.addDataToDb(user).then((value) {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) {
+            return HomeScreen();
+          }));
         });
-    }
+      } else {
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) {
+          return HomeScreen();
+        }));
+      }
+    });
+  }
 }
