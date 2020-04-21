@@ -6,11 +6,17 @@ import 'package:skype_clone/screens/login_secreen.dart';
 
 void main() => runApp(MyApp());
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+    FirebaseRepository _repository = FirebaseRepository();
+
   @override
   Widget build(BuildContext context) {
-   FirebaseRepository _repository = FirebaseRepository();
+ 
     return MaterialApp(
       title: 'Skype clone',
       debugShowCheckedModeBanner: false,
@@ -21,6 +27,7 @@ class MyApp extends StatelessWidget {
         future: _repository.getCurrentUser(),
         builder: (context, AsyncSnapshot<FirebaseUser> snapshot){
           if (snapshot.hasData) {
+            print('Data: ${snapshot.data.email}');
             return HomeScreen();
           } else { 
             return LoginScreen();
