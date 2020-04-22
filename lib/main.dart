@@ -26,7 +26,8 @@ class _MyAppState extends State<MyApp> {
         '/search_screen': (context) => SearchScreen(),
       },
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        // primarySwatch: Colors.blue,
+        brightness: Brightness.dark
       ),
       home: FutureBuilder(
         future: _repository.getCurrentUser(),
