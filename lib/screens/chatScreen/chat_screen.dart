@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:skype_clone/models/message.dart';
 import 'package:skype_clone/models/user.dart';
+import 'package:skype_clone/resources/firebase_repository.dart';
 import 'package:skype_clone/utils/universal_variables.dart';
 import 'package:skype_clone/widgets/appbar.dart';
 import 'package:skype_clone/widgets/custom_Tile.dart';
@@ -14,100 +17,129 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController textFieldController = TextEditingController();
+  FirebaseRepository _repository = FirebaseRepository();
+  User sender;
+  String _currentUserId;
+
   bool isWriting = false;
 
-  
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _repository.getCurrentUser().then((user) {
+      _currentUserId = user.uid;
+
+      setState(() {
+        sender = User(
+            uid: user.uid, name: user.displayName, profilePhoto: user.photoUrl);
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: UniversalVariables.blackColor,
       appBar: customAppBar(context),
-      body: Column( 
-        children: <Widget>[ 
-          Flexible( 
+      body: Column(
+        children: <Widget>[
+          Flexible(
             child: messageList(),
           ),
           chatControls(),
         ],
-        ),
+      ),
     );
   }
 
   Widget messageList() {
-    return ListView.builder( 
-      itemCount: 6,
-      itemBuilder:(context, index) {
-        return chatMessageItem();
-      });
+    return StreamBuilder(
+      stream: Firestore.instance
+          .collection("messages")
+          .document(_currentUserId)
+          .collection(widget.receiver.uid)
+          .orderBy("timestamp", descending: true)
+          .snapshots(),
+          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.data == null) 
+            {
+              return Center(child: CircularProgressIndicator());
+            }
+            return ListView.builder( 
+            itemCount: snapshot.data.documents.length,
+            itemBuilder:(context, index) {
+              return chatMessageItem(snapshot.data.documents[index]);
+            });
+
+          },
+    );
   }
 
-  Widget chatMessageItem() {
-    return Container( 
+  Widget chatMessageItem(DocumentSnapshot snapshot) {
+    return Container(
       margin: EdgeInsets.symmetric(vertical: 15),
-      child: Container( 
-        alignment: Alignment.centerRight, // move to the right
-        child: senderLayout(),
+      child: Container(
+        alignment: snapshot['senderId'] == _currentUserId
+        ? Alignment.centerRight
+        : Alignment.centerLeft, 
+        child: snapshot['senderId'] == _currentUserId
+        ? senderLayout(snapshot)
+        : receiverLayout(snapshot),
       ),
     );
-
   }
 
-  Widget senderLayout() {
+  Widget senderLayout(DocumentSnapshot snapshot) {
     Radius messageRadius = Radius.circular(10);
 
-    return Container( 
+    return Container(
       margin: EdgeInsets.only(top: 12),
-      constraints: BoxConstraints(  
-        maxWidth: MediaQuery.of(context).size.width * 0.65
-      ),
-      decoration: BoxDecoration(  
-        color: UniversalVariables.senderColor,
-        borderRadius: BorderRadius.only( 
-          topLeft: messageRadius,
-          topRight:messageRadius,
-          bottomLeft: messageRadius,
-        )
-      ),
-      child: Padding( 
+      constraints:
+          BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+      decoration: BoxDecoration(
+          color: UniversalVariables.senderColor,
+          borderRadius: BorderRadius.only(
+            topLeft: messageRadius,
+            topRight: messageRadius,
+            bottomLeft: messageRadius,
+          )),
+      child: Padding(
         padding: EdgeInsets.all(10),
-        child: Text('Hello' , 
-         style: TextStyle(
-          //  color: Colors.white,
-          fontSize: 16
-           ),),
+        child: getMessage(snapshot),
       ),
     );
-
   }
 
-  Widget receiverLayout() {
+  getMessage(DocumentSnapshot snapshot) {
+    return Text(
+          snapshot['message'],
+          style: TextStyle(
+              //  color: Colors.white,
+              fontSize: 16),
+        );
+  }
+  Widget receiverLayout(DocumentSnapshot snapshot) {
     Radius messageRadius = Radius.circular(10);
 
-    return Container( 
+    return Container(
       margin: EdgeInsets.only(top: 12),
-      constraints: BoxConstraints(  
-        maxWidth: MediaQuery.of(context).size.width * 0.65
-      ),
-      decoration: BoxDecoration(  
-        color: UniversalVariables.receiverColor,
-        borderRadius: BorderRadius.only( 
-          bottomRight: messageRadius,
-          topRight:messageRadius,
-          bottomLeft: messageRadius,
-        )
-      ),
-      child: Padding( 
+      constraints:
+          BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+      decoration: BoxDecoration(
+          color: UniversalVariables.receiverColor,
+          borderRadius: BorderRadius.only(
+            bottomRight: messageRadius,
+            topRight: messageRadius,
+            bottomLeft: messageRadius,
+          )),
+      child: Padding(
         padding: EdgeInsets.all(10),
-        child: Text('Hello' , 
-         style: TextStyle(
-          //  color: Colors.white,
-          fontSize: 16
-           ),),
+        child: getMessage(snapshot),
       ),
     );
-
   }
-  
+
   Widget chatControls() {
     setWritingTo(bool val) {
       setState(() {
@@ -116,86 +148,84 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     addMediaModal(context) {
-      showModalBottomSheet( 
-        context: context,
-         builder: (context) {
-           return Column(  
-             children: <Widget>[
-               Container( 
-                 padding: EdgeInsets.symmetric(vertical:15),
-                 child: Row(children: <Widget>[
-                   FlatButton(  
-                     child: Icon( 
-                       Icons.close,
-                     ),
-                     onPressed: () => Navigator.maybePop(context),
-                   ),
-                   Expanded(  
-                     child: Align( 
-                       alignment: Alignment.centerLeft,
-                       child: Text( 
-                         'Content and tools',
-                         style: TextStyle( 
-                           color: Colors.white,
-                           fontSize: 20,
-                           fontWeight: FontWeight.bold
-                         ),
-                       ),
-                     ),
-                   )
-                 ],),
-               ),
-               Flexible( 
-                 child: ListView(children: <Widget>[
-                   ModalTile( 
-                     title: "Media",
-                     subtitle: "Share Photos and Video",
-                     icon: Icons.image,
-
-                   ),
-                    ModalTile( 
-                     title: "File",
-                     subtitle: "Share files",
-                     icon: Icons.tab,
-
-                   ),
-                    ModalTile( 
-                     title: "Contact",
-                     subtitle: "Share contacts",
-                     icon: Icons.contacts,
-
-                   ),
-                    ModalTile( 
-                     title: "Location",
-                     subtitle: "Share a location",
-                     icon: Icons.add_location,
-
-                   ),
-                    ModalTile( 
-                     title: "Schedule a call",
-                     subtitle: "Arrange  a skype call and get reminders",
-                     icon: Icons.schedule,
-
-                   ),
-                    ModalTile( 
-                     title: "Create Poll",
-                     subtitle: "Share polls",
-                     icon: Icons.poll,
-
-                   )
-                 ],),
-               )
-             ],
-           );
-         });
+      showModalBottomSheet(
+          context: context,
+          builder: (context) {
+            return Column(
+              children: <Widget>[
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                  child: Row(
+                    children: <Widget>[
+                      FlatButton(
+                        child: Icon(
+                          Icons.close,
+                        ),
+                        onPressed: () => Navigator.maybePop(context),
+                      ),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Content and tools',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    children: <Widget>[
+                      ModalTile(
+                        title: "Media",
+                        subtitle: "Share Photos and Video",
+                        icon: Icons.image,
+                      ),
+                      ModalTile(
+                        title: "File",
+                        subtitle: "Share files",
+                        icon: Icons.tab,
+                      ),
+                      ModalTile(
+                        title: "Contact",
+                        subtitle: "Share contacts",
+                        icon: Icons.contacts,
+                      ),
+                      ModalTile(
+                        title: "Location",
+                        subtitle: "Share a location",
+                        icon: Icons.add_location,
+                      ),
+                      ModalTile(
+                        title: "Schedule a call",
+                        subtitle: "Arrange  a skype call and get reminders",
+                        icon: Icons.schedule,
+                      ),
+                      ModalTile(
+                        title: "Create Poll",
+                        subtitle: "Share polls",
+                        icon: Icons.poll,
+                      )
+                    ],
+                  ),
+                )
+              ],
+            );
+          });
     }
-    return Container( 
+
+    return Container(
       padding: EdgeInsets.all(10),
-      child: Row( 
+      child: Row(
         children: <Widget>[
           GestureDetector(
-              onTap: () => addMediaModal(context),
-              child: Container(  
+            onTap: () => addMediaModal(context),
+            child: Container(
               padding: EdgeInsets.all(5),
               decoration: BoxDecoration(
                 gradient: UniversalVariables.fabGradient,
@@ -204,95 +234,108 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Icon(Icons.add),
             ),
           ),
-          SizedBox(width: 5,),
-          Expanded( 
-            child: TextField(  
+          SizedBox(
+            width: 5,
+          ),
+          Expanded(
+            child: TextField(
               controller: textFieldController,
-              style: TextStyle(  
+              style: TextStyle(
                 color: Colors.white,
               ),
               onChanged: (val) {
                 (val.length > 0 && val.trim() != "")
-                 ? setWritingTo(true) 
-                 : setWritingTo(false); // avoid empty and spaces only
+                    ? setWritingTo(true)
+                    : setWritingTo(false); // avoid empty and spaces only
               },
-              decoration: InputDecoration(  
-                hintText: "Type a message",
-                hintStyle: TextStyle( 
-                  color: UniversalVariables.greyColor,
-                ),
-                border: OutlineInputBorder(  
-                  borderRadius: const BorderRadius.all(  
-                    const Radius.circular(50.0),
+              decoration: InputDecoration(
+                  hintText: "Type a message",
+                  hintStyle: TextStyle(
+                    color: UniversalVariables.greyColor,
                   ),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                filled: true,
-                fillColor: UniversalVariables.separatorColor,
-                suffix: GestureDetector( 
-                  onTap: (){},
-                  child: Icon(Icons.face),
-                )
-              ),
+                  border: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(
+                      const Radius.circular(50.0),
+                    ),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                  filled: true,
+                  fillColor: UniversalVariables.separatorColor,
+                  suffix: GestureDetector(
+                    onTap: () {},
+                    child: Icon(Icons.face),
+                  )),
             ),
           ),
-          isWriting 
-          ? Container()
-          : Padding( 
-            padding: EdgeInsets.symmetric(horizontal: 10),
-            child: Icon(Icons.record_voice_over),
-            ),
-          isWriting 
-          ? Container()
-          : Icon(Icons.camera_alt),
-
-          isWriting 
-          ? Container( 
-            margin: EdgeInsets.only(left: 10),
-            decoration: BoxDecoration(  
-              gradient: UniversalVariables.fabGradient,
-              shape: BoxShape.circle
-            ),
-            child: IconButton( 
-              icon: Icon(  
-                Icons.send,
-                size: 15,                
-              ), onPressed: () {},
-            ),
-          ):
-          Container()
+          isWriting
+              ? Container()
+              : Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: Icon(Icons.record_voice_over),
+                ),
+          isWriting ? Container() : Icon(Icons.camera_alt),
+          isWriting
+              ? Container(
+                  margin: EdgeInsets.only(left: 10),
+                  decoration: BoxDecoration(
+                      gradient: UniversalVariables.fabGradient,
+                      shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.send,
+                      size: 15,
+                    ),
+                    onPressed: () => sendMessage(),
+                  ),
+                )
+              : Container()
         ],
-        ),
+      ),
     );
-
   }
+
+  sendMessage() {
+    var text = textFieldController.text;
+    Message message = Message(
+      receiverId: widget.receiver.uid,
+      senderId: sender.uid,
+      message: text,
+      timestamp: FieldValue.serverTimestamp(),
+      type: 'text',
+    );
+    setState(() {
+      isWriting = false;
+    });
+    _repository.addMessageToDb(message, sender, widget.receiver);
+  }
+
   CustomAppBar customAppBar(context) {
-    return CustomAppBar(  
-      leading: IconButton( 
-        icon: Icon( 
+    return CustomAppBar(
+      leading: IconButton(
+        icon: Icon(
           Icons.arrow_back,
         ),
-        onPressed: (){
+        onPressed: () {
           Navigator.pop(context);
         },
       ),
       centerTitle: false,
-      title: Text( 
+      title: Text(
         widget.receiver.name,
       ),
       actions: <Widget>[
-        IconButton( 
-          icon:Icon(Icons.video_call),
-            onPressed: (){},
+        IconButton(
+          icon: Icon(Icons.video_call),
+          onPressed: () {},
         ),
-         IconButton( 
-          icon:Icon(Icons.phone),
-            onPressed: (){},
+        IconButton(
+          icon: Icon(Icons.phone),
+          onPressed: () {},
         )
       ],
     );
-
   }
 }
 
@@ -301,43 +344,38 @@ class ModalTile extends StatelessWidget {
   final String subtitle;
   final IconData icon;
 
-  const ModalTile({Key key, this.title, this.subtitle, this.icon}) : super(key: key);
+  const ModalTile({Key key, this.title, this.subtitle, this.icon})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal:15),
+      padding: const EdgeInsets.symmetric(horizontal: 15),
       child: CustomTile(
         mini: false,
-        leading: Container( 
-          margin: EdgeInsets.only( right: 10),
+        leading: Container(
+          margin: EdgeInsets.only(right: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-            color: UniversalVariables.receiverColor
-          ),
+              borderRadius: BorderRadius.circular(15),
+              color: UniversalVariables.receiverColor),
           padding: EdgeInsets.all(10),
-          child: Icon( 
+          child: Icon(
             icon,
             color: UniversalVariables.greyColor,
             size: 38,
           ),
         ),
-        subtitle: Text( 
+        subtitle: Text(
           subtitle,
           style: TextStyle(
             color: UniversalVariables.greyColor,
           ),
         ),
-        title: Text(  
+        title: Text(
           title,
-          style: TextStyle( 
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.white
-          ),
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
         ),
-
-        
       ),
     );
   }
