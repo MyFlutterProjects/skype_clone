@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:skype_clone/constants/strings.dart';
 import 'package:skype_clone/models/models.dart';
 import 'package:skype_clone/utils/utils.dart';
 
@@ -33,8 +34,8 @@ class FirebaseMethods {
 
  Future<bool> authenticateUser(FirebaseUser user) async { 
    QuerySnapshot result = await firestore
-   .collection("users")
-   .where("email", isEqualTo: user.email)
+   .collection(USERS_COLLECTION)
+   .where(EMAIL_FIELD, isEqualTo: user.email)
    .getDocuments();
 
    final List<DocumentSnapshot> docs = result.documents;
@@ -55,14 +56,13 @@ class FirebaseMethods {
    );
 
    firestore
-   .collection("users")
+   .collection(USERS_COLLECTION)
    .document(currentUser.uid)
    .setData(user.toMap(user));
  }
 
  Future<void> signOut() async { 
    await _googleSignin.disconnect();
-   print('User Signout');
    await _googleSignin.signOut();
    return await _auth.signOut();
  }
@@ -70,7 +70,7 @@ class FirebaseMethods {
   Future<List<User>> fetchAllUsers(FirebaseUser currentUser) async {  
     List<User> userList = List<User>();
 
-    QuerySnapshot querySnapshot = await firestore.collection("users").getDocuments();
+    QuerySnapshot querySnapshot = await firestore.collection(USERS_COLLECTION).getDocuments();
     for (var i = 0; i < querySnapshot.documents.length; i++) {
       if (querySnapshot.documents[i].documentID != currentUser.uid)
          userList.add(User.fromMap(querySnapshot.documents[i].data));
@@ -84,14 +84,14 @@ class FirebaseMethods {
     var map = message.toMap();
 
     await firestore
-    .collection("messages")
+    .collection(MESSAGES_COLLECTION)
     .document(message.senderId)
     .collection(message.receiverId)
     .add(map);
 
     // for the receiver 
      return await firestore
-    .collection("messages")
+    .collection(MESSAGES_COLLECTION)
     .document(message.receiverId)
     .collection(message.senderId)
     .add(map);
