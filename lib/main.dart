@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:skype_clone/resources/firebase_repository.dart';
 import 'package:skype_clone/screens/home_screen.dart';
 import 'package:skype_clone/screens/login_secreen.dart';
+import 'package:skype_clone/screens/search_screen.dart';
 
 void main() => runApp(MyApp());
 
@@ -20,6 +21,10 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'Skype clone',
       debugShowCheckedModeBanner: false,
+      initialRoute: '/',
+      routes: {  
+        '/search_screen': (context) => SearchScreen(),
+      },
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
