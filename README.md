@@ -6,4 +6,8 @@
 - Page view (widgets in book format one to another)
 - shimmer package - for amination
 - Building apk (reduce size of apk - flutter build appbundle.)
+- Searching (users), have learn how you can search (query from list of return users)
+- Clearling input
+- Clean code
+- 
 # skype_clone
