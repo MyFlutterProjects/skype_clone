@@ -9,5 +9,5 @@
 - Searching (users), have learn how you can search (query from list of return users)
 - Clearling input
 - Writing Clean code: by using model references instead of strings(hard coded values)
-- 
+- Image upload
 # skype_clone
