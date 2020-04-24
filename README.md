@@ -11,5 +11,9 @@
 - Writing Clean code: by using model references instead of strings(hard coded values)
 - Image upload
 - Videa and audio calling
+- Caching data(Images)
+-Listening for changes; using notifiers, stream builder
+- Observers - to determine user's status
+
 
 # skype_clone

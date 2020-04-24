@@ -1,36 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:skype_clone/resources/firebase_repository.dart';
+import 'package:provider/provider.dart';
+import 'package:skype_clone/models/contact.dart';
+import 'package:skype_clone/pageViews/widgets/contact_view.dart';
+import 'package:skype_clone/pageViews/widgets/new_chat_button.dart';
+import 'package:skype_clone/pageViews/widgets/quiet_box.dart';
+import 'package:skype_clone/pageViews/widgets/user_circle.dart';
+import 'package:skype_clone/provider/user_provider.dart';
+import 'package:skype_clone/resources/firebase_methods.dart';
+import 'package:skype_clone/screens/login_secreen.dart';
 import 'package:skype_clone/utils/universal_variables.dart';
-import 'package:skype_clone/utils/utils.dart';
 import 'package:skype_clone/widgets/appbar.dart';
-import 'package:skype_clone/widgets/custom_Tile.dart';
 
-class ChatListScreen extends StatefulWidget {
-  @override
-  _ChatListScreenState createState() => _ChatListScreenState();
-}
-
-//global 
-final FirebaseRepository _repository = FirebaseRepository();
-
-
-class _ChatListScreenState extends State<ChatListScreen> {
-  String currentUserId;
-  String initials;
-
-  @override
-  void initState() {
-    super.initState();
-    _repository.getCurrentUser()
-    .then((user) {
-     setState(() {
-        currentUserId = user.uid;
-        initials = Utils.getInitials(user.displayName);
-     });
-
-    });
-  }
-
+class ChatListScreen extends StatelessWidget {
+ // temporary logout
+ final FirebaseMethods firebaseMethods = FirebaseMethods();
   CustomAppBar customAppBar(BuildContext context) {
     return CustomAppBar(
       leading: IconButton( 
@@ -41,7 +25,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         onPressed: (){},
       ),
       
-      title: UserCircle(initials),
+      title: UserCircle(),
       centerTitle: true,
       actions: <Widget>[
         IconButton(  
@@ -56,10 +40,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
          IconButton(  
           icon: Icon(  
-            Icons.more_vert,
+            // Icons.more_vert,
+            Icons.exit_to_app,
             color: Colors.white,
           ),
-          onPressed: (){},
+          onPressed: () async {
+            await firebaseMethods.signOut();
+            Navigator.pushNamed(context, '/');        
+
+
+          },
         )
       ],
     );
@@ -71,146 +61,44 @@ class _ChatListScreenState extends State<ChatListScreen> {
       backgroundColor: UniversalVariables.blackColor,
       appBar: customAppBar(context),
       floatingActionButton: NewChatButton(),
-      body: ChartListContainer(currentUserId),
+      body: ChartListContainer(),
 
       
     );
   }
 }
 
-class ChartListContainer extends StatefulWidget {
-  final String currentUserId;
-
-  const ChartListContainer(this.currentUserId);
-
-  @override
-  _ChartListContainerState createState() => _ChartListContainerState();
-}
-
-class _ChartListContainerState extends State<ChartListContainer> {
+class ChartListContainer extends StatelessWidget {
+  final FirebaseMethods _chatMethods = FirebaseMethods();
   @override
   Widget build(BuildContext context) {
+    final UserProvider userProvider = Provider.of<UserProvider>(context);
     return Container(
-      child: ListView.builder(
-        padding: EdgeInsets.all(10),
-        itemCount: 2,
-        itemBuilder: (context, index) {
-          return CustomTile(
-            mini: false,
-            onTap: () {},
-            title: Text( 
-              'Michael Kabali',
-              style: TextStyle(  
-                color: Colors.white,
-                fontFamily: "Arial",
-                fontSize: 19,
-              ),
-            ),
-            subtitle: Text(
-              'Hello',  
-              style: TextStyle(  
-                color: UniversalVariables.greyColor,
-                fontSize: 19,
-              )
-            ),
-            leading: Container( 
-              constraints: BoxConstraints(maxHeight: 60, maxWidth: 60),
-              child: Stack(  
-                children: <Widget>[
-                  CircleAvatar( 
-                    maxRadius: 30,
-                    backgroundColor: Colors.grey,
-                    backgroundImage: NetworkImage('https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcRCZWRt-XjaeJyyqjk35QbHYV0cwLbO6FpWTQuO2dTDKIBAOoRX&usqp=CAU'),
-                  ),
-                  Align(  
-                    alignment: Alignment.bottomRight,
-                    child: Container( 
-                      height: 13,
-                      width: 13,
-                      decoration: BoxDecoration(  
-                        shape: BoxShape.circle,
-                        color: UniversalVariables.onlineDotColor,
-                        border: Border.all(
-                          color: UniversalVariables.blackColor,
-                          width: 2
-                        )
-                      ),
-                    ),
-                  )
-                ],
-              ),
 
-            ),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _chatMethods.fetchContacts(userId: userProvider.getUser.uid),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            var docList = snapshot.data.documents;
 
-          );
-        },
-        ),
+            if (docList.isEmpty) { 
+              return QuietBox();
+            }
+            return ListView.builder(
+          padding: EdgeInsets.all(10),
+          itemCount: docList.length,
+          itemBuilder: (context, index) {
+            Contact contact = Contact.fromMap(docList[index].data);
+             return  ContactView(contact);
+               },
+        );
+          }
+          return Center(child: CircularProgressIndicator(),);
+          
+        }),
       
     );
   }
 }
 
-class UserCircle extends StatelessWidget {
-  final String text;
-  UserCircle(this.text);
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 40,
-      width: 40,
-      decoration: BoxDecoration(
-        color: UniversalVariables.separatorColor,
-        borderRadius: BorderRadius.circular(50), 
-         ),
-         child: Stack(  
-           children: <Widget>[
-             Align( 
-               alignment: Alignment.center,
-               child: Text( 
-                 text, 
-                 style: TextStyle(  
-                   fontWeight: FontWeight.bold, 
-                   color: UniversalVariables.lightBlueColor,
-                   fontSize: 13,
-                 ),
-               ),
-             ),
-             Align( 
-               alignment: Alignment.bottomRight,
-               child: Container( 
-                 height: 12,
-                 width: 12,
-                 decoration: BoxDecoration( 
-                   shape: BoxShape.circle,
-                   border: Border.all( 
-                     color: UniversalVariables.blackColor, 
-                     width: 2
-                   ),
-                   color: UniversalVariables.onlineDotColor
-                  ),
-               ),
-             )
-           ],
-         ),
-    );
-  }
-}
 
-class NewChatButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration( 
-        gradient: UniversalVariables.fabGradient,
-        // shape: BoxShape.circle,  or 
-        borderRadius: BorderRadius.circular(50),
-      ),
-       child: Icon( 
-         Icons.edit,
-         color: Colors.white,
-         size: 25,
-       ),      
-       padding: EdgeInsets.all(15),
-    );
-  }
-}
