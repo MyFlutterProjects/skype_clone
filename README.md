@@ -10,4 +10,6 @@
 - Clearling input
 - Writing Clean code: by using model references instead of strings(hard coded values)
 - Image upload
+- Videa and audio calling
+
 # skype_clone

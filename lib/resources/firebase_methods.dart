@@ -10,17 +10,26 @@ import 'package:skype_clone/provider/image_upload_provider.dart';
 import 'package:skype_clone/utils/utils.dart';
 
 class FirebaseMethods {
+  
   final FirebaseAuth _auth = FirebaseAuth.instance;
   GoogleSignIn _googleSignin = GoogleSignIn();
-  static final Firestore firestore = Firestore.instance;
+  static final Firestore _firestore = Firestore.instance;
   User user;
   StorageReference _storageReference;
+  static final CollectionReference _userCollection = _firestore.collection(USERS_COLLECTION);
+  
  
  Future<FirebaseUser> getCurrentUser() async {
    FirebaseUser currentUser;
    currentUser = await _auth.currentUser();
    return currentUser;
  }
+
+ Future<User> getUserDetails() async { 
+   FirebaseUser currentUser = await getCurrentUser();
+   DocumentSnapshot documentSnapshot = await _userCollection.document(currentUser.uid).get();
+   return User.fromMap(documentSnapshot.data);
+   }
 
  Future<FirebaseUser> signin() async {
    GoogleSignInAccount _signInAccount = await _googleSignin.signIn();
@@ -38,7 +47,7 @@ class FirebaseMethods {
  }
 
  Future<bool> authenticateUser(FirebaseUser user) async { 
-   QuerySnapshot result = await firestore
+   QuerySnapshot result = await _firestore
    .collection(USERS_COLLECTION)
    .where(EMAIL_FIELD, isEqualTo: user.email)
    .getDocuments();
@@ -60,7 +69,7 @@ class FirebaseMethods {
 
    );
 
-   firestore
+   _firestore
    .collection(USERS_COLLECTION)
    .document(currentUser.uid)
    .setData(user.toMap(user));
@@ -75,7 +84,7 @@ class FirebaseMethods {
   Future<List<User>> fetchAllUsers(FirebaseUser currentUser) async {  
     List<User> userList = List<User>();
 
-    QuerySnapshot querySnapshot = await firestore.collection(USERS_COLLECTION).getDocuments();
+    QuerySnapshot querySnapshot = await _firestore.collection(USERS_COLLECTION).getDocuments();
     for (var i = 0; i < querySnapshot.documents.length; i++) {
       if (querySnapshot.documents[i].documentID != currentUser.uid)
          userList.add(User.fromMap(querySnapshot.documents[i].data));
@@ -88,14 +97,14 @@ class FirebaseMethods {
   Future<void> addMessageToDb(Message message, User sender, User receiver)  async {
     var map = message.toMap();
 
-    await firestore
+    await _firestore
     .collection(MESSAGES_COLLECTION)
     .document(message.senderId)
     .collection(message.receiverId)
     .add(map);
 
     // for the receiver 
-     return await firestore
+     return await _firestore
     .collection(MESSAGES_COLLECTION)
     .document(message.receiverId)
     .collection(message.senderId)
@@ -132,14 +141,14 @@ class FirebaseMethods {
 
     var map = _message.toImageMap();
     // set image to db 
-     await firestore
+     await _firestore
     .collection(MESSAGES_COLLECTION)
     .document(_message.senderId)
     .collection(_message.receiverId)
     .add(map);
 
     // for the receiver 
-     await firestore
+     await _firestore
     .collection(MESSAGES_COLLECTION)
     .document(_message.receiverId)
     .collection(_message.senderId)
